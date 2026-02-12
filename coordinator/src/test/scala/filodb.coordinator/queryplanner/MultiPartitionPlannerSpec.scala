@@ -1001,7 +1001,12 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
       PlannerParams(processMultiPartition = true)))
 
     execPlan.isInstanceOf[PartKeysDistConcatExec] shouldEqual (true)
-    execPlan.children(0).isInstanceOf[PartKeysDistConcatExec] shouldEqual(true)
+    execPlan.children.size shouldEqual 2
+
+    // For metadata queries with multiple partitions:
+    // children(0) should be PartKeysExec for local partition
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[PartKeysExec] shouldEqual(true)
     execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual(true)
 
     val queryParams = execPlan.children(1).asInstanceOf[MetadataRemoteExec].queryContext.origQueryParams.
@@ -1009,9 +1014,9 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
 
     queryParams.startSecs shouldEqual(startSeconds)
     queryParams.endSecs shouldEqual(localPartitionStart - 1)
-    execPlan.children(0).asInstanceOf[PartKeysDistConcatExec].children(0).asInstanceOf[PartKeysExec].start shouldEqual
+    execPlan.children(0).asInstanceOf[PartKeysExec].start shouldEqual
       (localPartitionStart * 1000)
-    execPlan.children(0).asInstanceOf[PartKeysDistConcatExec].children(0).asInstanceOf[PartKeysExec].end shouldEqual
+    execPlan.children(0).asInstanceOf[PartKeysExec].end shouldEqual
       (endSeconds * 1000)
   }
 
@@ -1044,7 +1049,12 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
       PlannerParams(processMultiPartition = true)))
 
     execPlan.isInstanceOf[PartKeysDistConcatExec] shouldEqual (true)
-    execPlan.children(0).isInstanceOf[PartKeysDistConcatExec] shouldEqual(true)
+    execPlan.children.size shouldEqual 2
+
+    // For metadata queries with multiple partitions:
+    // children(0) should be PartKeysExec for local partition
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[PartKeysExec] shouldEqual(true)
     execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual(true)
 
     val queryParams = execPlan.children(1).asInstanceOf[MetadataRemoteExec].queryContext.origQueryParams.
@@ -1052,9 +1062,9 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
 
     queryParams.startSecs shouldEqual(startSeconds)
     queryParams.endSecs shouldEqual(localPartitionStart - 1)
-    execPlan.children(0).asInstanceOf[PartKeysDistConcatExec].children(0).asInstanceOf[PartKeysExec].start shouldEqual
+    execPlan.children(0).asInstanceOf[PartKeysExec].start shouldEqual
       (localPartitionStart * 1000)
-    execPlan.children(0).asInstanceOf[PartKeysDistConcatExec].children(0).asInstanceOf[PartKeysExec].end shouldEqual
+    execPlan.children(0).asInstanceOf[PartKeysExec].end shouldEqual
       (endSeconds * 1000)
   }
 
@@ -1083,7 +1093,12 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
       PlannerParams(processMultiPartition = true)))
 
     execPlan.isInstanceOf[PartKeysDistConcatExec] shouldEqual (true)
-    execPlan.children(0).isInstanceOf[PartKeysDistConcatExec] shouldEqual(true)
+    execPlan.children.size shouldEqual 2
+
+    // For metadata queries with multiple partitions:
+    // children(0) should be PartKeysExec for local partition
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[PartKeysExec] shouldEqual(true)
     execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual(true)
 
     val queryParams = execPlan.children(1).asInstanceOf[MetadataRemoteExec].queryContext.origQueryParams.
@@ -1091,9 +1106,9 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
 
     queryParams.startSecs shouldEqual(startSeconds)
     queryParams.endSecs shouldEqual(localPartitionStart - 1)
-    execPlan.children(0).asInstanceOf[PartKeysDistConcatExec].children(0).asInstanceOf[PartKeysExec].start shouldEqual
+    execPlan.children(0).asInstanceOf[PartKeysExec].start shouldEqual
       (localPartitionStart * 1000)
-    execPlan.children(0).asInstanceOf[PartKeysDistConcatExec].children(0).asInstanceOf[PartKeysExec].end shouldEqual
+    execPlan.children(0).asInstanceOf[PartKeysExec].end shouldEqual
       (endSeconds * 1000)
   }
 
@@ -1268,7 +1283,12 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
       PlannerParams(processMultiPartition = true)))
 
     execPlan.isInstanceOf[LabelValuesDistConcatExec] shouldEqual (true)
-    execPlan.children(0).isInstanceOf[LabelValuesDistConcatExec] shouldEqual(true)
+    execPlan.children.size shouldEqual 2
+
+    // For metadata queries with multiple partitions:
+    // children(0) should be LabelValuesExec for local partition (direct, not wrapped)
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[LabelValuesExec] shouldEqual(true)
     execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual(true)
 
     val expectedUrlParams = Map("filter" -> """_ws_="demo"""", "labels" -> "__metric__")
@@ -1276,9 +1296,9 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
                                                                                                   // should have quotes
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].queryContext.origQueryParams.asInstanceOf[PromQlQueryParams].
       endSecs shouldEqual(localPartitionStart - 1)
-    execPlan.children(0).asInstanceOf[LabelValuesDistConcatExec].children(0).asInstanceOf[LabelValuesExec].startMs shouldEqual
+    execPlan.children(0).asInstanceOf[LabelValuesExec].startMs shouldEqual
       (localPartitionStart * 1000)
-    execPlan.children(0).asInstanceOf[LabelValuesDistConcatExec].children(0).asInstanceOf[LabelValuesExec].endMs shouldEqual
+    execPlan.children(0).asInstanceOf[LabelValuesExec].endMs shouldEqual
       (endSeconds * 1000)
   }
 
@@ -1310,7 +1330,12 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
       PlannerParams(processMultiPartition = true)))
 
     execPlan.isInstanceOf[TsCardReduceExec] shouldEqual (true)
-    execPlan.children(0).isInstanceOf[TsCardReduceExec] shouldEqual (true)
+    execPlan.children.size shouldEqual 2
+
+    // For metadata queries with multiple partitions:
+    // children(0) should be TsCardExec for local partition (direct, not wrapped)
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[TsCardExec] shouldEqual (true)
     execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual (true)
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].urlParams shouldEqual (expectedUrlParams)
   }
@@ -1486,13 +1511,18 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
     execPlan.isInstanceOf[PartKeysDistConcatExec] shouldEqual true
     execPlan.children.size shouldEqual 2
     val expectedUrlParams = Map("match[]" -> promQl)
+
+    // Check if children are sorted: local partition children first, then remote
+    // children(0) should be PartKeysExec for local partition
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[PartKeysExec] shouldEqual true
+    execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual true
+
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].urlParams shouldEqual(expectedUrlParams)
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].queryContext.origQueryParams.asInstanceOf[PromQlQueryParams].
       endSecs shouldEqual(localPartitionStart - 1)
-    execPlan.children(0).asInstanceOf[PartKeysDistConcatExec]
-      .children(0).asInstanceOf[PartKeysExec].start shouldEqual (localPartitionStart * 1000)
-    execPlan.children(0).asInstanceOf[PartKeysDistConcatExec]
-      .children(0).asInstanceOf[PartKeysExec].end shouldEqual (endSeconds * 1000)
+    execPlan.children(0).asInstanceOf[PartKeysExec].start shouldEqual (localPartitionStart * 1000)
+    execPlan.children(0).asInstanceOf[PartKeysExec].end shouldEqual (endSeconds * 1000)
   }
 
   it("should materialize LabelNames query correctly") {
@@ -1509,13 +1539,18 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
     execPlan.children.size shouldEqual 2
 
     val expectedUrlParams = Map("match[]" -> promQl)
+
+    // For metadata queries with multiple partitions:
+    // children(0) should be LabelNamesExec for local partition (direct, not wrapped)
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[LabelNamesExec] shouldEqual true
+    execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual true
+
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].urlParams shouldEqual(expectedUrlParams)
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].queryContext.origQueryParams.asInstanceOf[PromQlQueryParams].
       endSecs shouldEqual(localPartitionStart - 1)
-    execPlan.children(0).asInstanceOf[LabelNamesDistConcatExec]
-      .children(0).asInstanceOf[LabelNamesExec].startMs shouldEqual (localPartitionStart * 1000)
-    execPlan.children(0).asInstanceOf[LabelNamesDistConcatExec]
-      .children(0).asInstanceOf[LabelNamesExec].endMs shouldEqual (endSeconds * 1000)
+    execPlan.children(0).asInstanceOf[LabelNamesExec].startMs shouldEqual (localPartitionStart * 1000)
+    execPlan.children(0).asInstanceOf[LabelNamesExec].endMs shouldEqual (endSeconds * 1000)
   }
 
   it("should materialize LabelNames query without metric filter correctly") {
@@ -1532,13 +1567,18 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
     execPlan.children.size shouldEqual 2
 
     val expectedUrlParams = Map("match[]" -> promQl)
+
+    // For metadata queries with multiple partitions:
+    // children(0) should be LabelNamesExec for local partition (direct, not wrapped)
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[LabelNamesExec] shouldEqual true
+    execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual true
+
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].urlParams shouldEqual (expectedUrlParams)
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].queryContext.origQueryParams.asInstanceOf[PromQlQueryParams].
       endSecs shouldEqual (localPartitionStart - 1)
-    execPlan.children(0).asInstanceOf[LabelNamesDistConcatExec]
-      .children(0).asInstanceOf[LabelNamesExec].startMs shouldEqual (localPartitionStart * 1000)
-    execPlan.children(0).asInstanceOf[LabelNamesDistConcatExec]
-      .children(0).asInstanceOf[LabelNamesExec].endMs shouldEqual (endSeconds * 1000)
+    execPlan.children(0).asInstanceOf[LabelNamesExec].startMs shouldEqual (localPartitionStart * 1000)
+    execPlan.children(0).asInstanceOf[LabelNamesExec].endMs shouldEqual (endSeconds * 1000)
   }
 
   it("should materialize LabelNames with empty query correctly") {
@@ -1555,13 +1595,18 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
     execPlan.children.size shouldEqual 2
 
     val expectedUrlParams = Map("match[]" -> "{}")
+
+    // For metadata queries with multiple partitions:
+    // children(0) should be LabelNamesExec for local partition (direct, not wrapped)
+    // children(1) should be MetadataRemoteExec for remote partition
+    execPlan.children(0).isInstanceOf[LabelNamesExec] shouldEqual true
+    execPlan.children(1).isInstanceOf[MetadataRemoteExec] shouldEqual true
+
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].urlParams shouldEqual (expectedUrlParams)
     execPlan.children(1).asInstanceOf[MetadataRemoteExec].queryContext.origQueryParams.asInstanceOf[PromQlQueryParams].
       endSecs shouldEqual (localPartitionStart - 1)
-    execPlan.children(0).asInstanceOf[LabelNamesDistConcatExec]
-      .children(0).asInstanceOf[LabelNamesExec].startMs shouldEqual (localPartitionStart * 1000)
-    execPlan.children(0).asInstanceOf[LabelNamesDistConcatExec]
-      .children(0).asInstanceOf[LabelNamesExec].endMs shouldEqual (endSeconds * 1000)
+    execPlan.children(0).asInstanceOf[LabelNamesExec].startMs shouldEqual (localPartitionStart * 1000)
+    execPlan.children(0).asInstanceOf[LabelNamesExec].endMs shouldEqual (endSeconds * 1000)
   }
 
   it ("should generate correct plan for multipartition BinaryJoin with instant function") {
@@ -2132,6 +2177,4 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
       planner.supportRemoteRawExport(lpWithMultipleFilters) shouldBe false
     }
   }
-
-
 }
