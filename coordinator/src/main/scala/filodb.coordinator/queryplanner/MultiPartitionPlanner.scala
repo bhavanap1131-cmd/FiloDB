@@ -1115,7 +1115,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
         group.collectFirst { case ColumnFilter(c, Equals(v: String)) if c == col => c -> v }.get
       ).toMap
 
-    val shouldFallback = shardKeyFilterGroups.exists(g => g.nonEmpty && !hasAllNonMetricEquals(g))
+    val shouldFallback = shardKeyFilterGroups.isEmpty || shardKeyFilterGroups.exists(g => !hasAllNonMetricEquals(g))
 
     lp match {
       case lc: LabelCardinality =>

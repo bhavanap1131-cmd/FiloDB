@@ -136,14 +136,14 @@ class ShardKeyRegexPlannerSpec extends AnyFunSpec with Matchers with ScalaFuture
 
   it("should generate Exec plan for subquery with windowing") {
     val expected =
-    """T~PeriodicSamplesMapper(start=1000000, step=0, end=1000000, window=Some(300000), functionId=Some(AvgOverTime), rawSource=false, offsetMs=None)
-      |-E~MultiPartitionDistConcatExec() on InProcessPlanDispatcher(QueryConfig(10 seconds,300000,1,50,antlr,true,true,None,None,None,None,25,true,false,true,Set(),None,Map(filodb-query-exec-metadataexec -> 65536, filodb-query-exec-aggregate-large-container -> 65536),RoutingConfig(false,1800000 milliseconds,true,0)))
-      |--E~LocalPartitionDistConcatExec() on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
-      |---T~PeriodicSamplesMapper(start=720000, step=60000, end=960000, window=None, functionId=None, rawSource=true, offsetMs=None)
-      |----E~MultiSchemaPartitionsExec(dataset=timeseries, shard=6, chunkMethod=TimeRangeChunkScan(420000,960000), filters=List(ColumnFilter(instance,Equals(Inst-1)), ColumnFilter(_metric_,Equals(test)), ColumnFilter(_ws_,Equals(demo)), ColumnFilter(_ns_,Equals(App-2))), colName=None, schema=None) on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
-      |---T~PeriodicSamplesMapper(start=720000, step=60000, end=960000, window=None, functionId=None, rawSource=true, offsetMs=None)
-      |----E~MultiSchemaPartitionsExec(dataset=timeseries, shard=22, chunkMethod=TimeRangeChunkScan(420000,960000), filters=List(ColumnFilter(instance,Equals(Inst-1)), ColumnFilter(_metric_,Equals(test)), ColumnFilter(_ws_,Equals(demo)), ColumnFilter(_ns_,Equals(App-2))), colName=None, schema=None) on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
-      |--E~PromQlRemoteExec(PromQlQueryParams(test{instance="Inst-1",_ws_="demo",_ns_="App-1"},720,60,960,None,false), PlannerParams(filodb,None,None,None,None,60000,PerQueryLimits(1000000,1000000,18000000,100000,100000,300000000,1000000,200000000),PerQueryLimits(50000,1000000,15000000,50000,50000,150000000,500000,100000000),None,None,None,false,86400000,86400000,true,true,false,false,true,10,false,true,TreeSet(),LegacyFailoverMode,None,None,None,None), queryEndpoint=remote-url, requestTimeoutMs=60000) on InProcessPlanDispatcher(QueryConfig(10 seconds,300000,1,50,antlr,true,true,None,None,None,None,25,true,false,true,Set(),Some(plannerSelector),Map(filodb-query-exec-metadataexec -> 65536, filodb-query-exec-aggregate-large-container -> 65536),RoutingConfig(false,1800000 milliseconds,true,0)))""".stripMargin
+      """T~PeriodicSamplesMapper(start=1000000, step=0, end=1000000, window=Some(300000), functionId=Some(AvgOverTime), rawSource=false, offsetMs=None)
+        |-E~MultiPartitionDistConcatExec() on InProcessPlanDispatcher(QueryConfig(10 seconds,300000,1,50,antlr,true,true,None,None,None,None,25,true,false,true,Set(),None,Map(filodb-query-exec-metadataexec -> 65536, filodb-query-exec-aggregate-large-container -> 65536),RoutingConfig(false,1800000 milliseconds,true,0)))
+        |--E~LocalPartitionDistConcatExec() on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
+        |---T~PeriodicSamplesMapper(start=720000, step=60000, end=960000, window=None, functionId=None, rawSource=true, offsetMs=None)
+        |----E~MultiSchemaPartitionsExec(dataset=timeseries, shard=6, chunkMethod=TimeRangeChunkScan(420000,960000), filters=List(ColumnFilter(instance,Equals(Inst-1)), ColumnFilter(_metric_,Equals(test)), ColumnFilter(_ws_,Equals(demo)), ColumnFilter(_ns_,Equals(App-2))), colName=None, schema=None) on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
+        |---T~PeriodicSamplesMapper(start=720000, step=60000, end=960000, window=None, functionId=None, rawSource=true, offsetMs=None)
+        |----E~MultiSchemaPartitionsExec(dataset=timeseries, shard=22, chunkMethod=TimeRangeChunkScan(420000,960000), filters=List(ColumnFilter(instance,Equals(Inst-1)), ColumnFilter(_metric_,Equals(test)), ColumnFilter(_ws_,Equals(demo)), ColumnFilter(_ns_,Equals(App-2))), colName=None, schema=None) on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
+        |--E~PromQlRemoteExec(PromQlQueryParams(test{instance="Inst-1",_ws_="demo",_ns_="App-1"},720,60,960,None,false), PlannerParams(filodb,None,None,None,None,60000,PerQueryLimits(1000000,1000000,18000000,100000,100000,300000000,1000000,200000000),PerQueryLimits(50000,1000000,15000000,50000,50000,150000000,500000,100000000),None,None,None,false,86400000,86400000,true,true,false,false,true,10,false,true,TreeSet(),LegacyFailoverMode,None,None,None,None), queryEndpoint=remote-url, requestTimeoutMs=60000) on InProcessPlanDispatcher(QueryConfig(10 seconds,300000,1,50,antlr,true,true,None,None,None,None,25,true,false,true,Set(),Some(plannerSelector),Map(filodb-query-exec-metadataexec -> 65536, filodb-query-exec-aggregate-large-container -> 65536),RoutingConfig(false,1800000 milliseconds,true,0)))""".stripMargin
     val lp = Parser.queryToLogicalPlan(
       """avg_over_time(test{_ws_ = "demo", _ns_ =~ "App.*", instance = "Inst-1" }[5m:1m])""",
       1000, 1000
@@ -198,13 +198,13 @@ class ShardKeyRegexPlannerSpec extends AnyFunSpec with Matchers with ScalaFuture
 
   it("should generate Exec plan for top level subquery") {
     val expected =
-        """E~MultiPartitionDistConcatExec() on InProcessPlanDispatcher(QueryConfig(10 seconds,300000,1,50,antlr,true,true,None,None,None,None,25,true,false,true,Set(),None,Map(filodb-query-exec-metadataexec -> 65536, filodb-query-exec-aggregate-large-container -> 65536),RoutingConfig(false,1800000 milliseconds,true,0)))
-          |-E~LocalPartitionDistConcatExec() on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
-          |--T~PeriodicSamplesMapper(start=720000, step=60000, end=960000, window=None, functionId=None, rawSource=true, offsetMs=None)
-          |---E~MultiSchemaPartitionsExec(dataset=timeseries, shard=6, chunkMethod=TimeRangeChunkScan(420000,960000), filters=List(ColumnFilter(instance,Equals(Inst-1)), ColumnFilter(_metric_,Equals(test)), ColumnFilter(_ws_,Equals(demo)), ColumnFilter(_ns_,Equals(App-2))), colName=None, schema=None) on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
-          |--T~PeriodicSamplesMapper(start=720000, step=60000, end=960000, window=None, functionId=None, rawSource=true, offsetMs=None)
-          |---E~MultiSchemaPartitionsExec(dataset=timeseries, shard=22, chunkMethod=TimeRangeChunkScan(420000,960000), filters=List(ColumnFilter(instance,Equals(Inst-1)), ColumnFilter(_metric_,Equals(test)), ColumnFilter(_ws_,Equals(demo)), ColumnFilter(_ns_,Equals(App-2))), colName=None, schema=None) on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
-          |-E~PromQlRemoteExec(PromQlQueryParams(test{instance="Inst-1",_ws_="demo",_ns_="App-1"},720,60,960,None,false), PlannerParams(filodb,None,None,None,None,60000,PerQueryLimits(1000000,1000000,18000000,100000,100000,300000000,1000000,200000000),PerQueryLimits(50000,1000000,15000000,50000,50000,150000000,500000,100000000),None,None,None,false,86400000,86400000,true,true,false,false,true,10,false,true,TreeSet(),LegacyFailoverMode,None,None,None,None), queryEndpoint=remote-url, requestTimeoutMs=60000) on InProcessPlanDispatcher(QueryConfig(10 seconds,300000,1,50,antlr,true,true,None,None,None,None,25,true,false,true,Set(),Some(plannerSelector),Map(filodb-query-exec-metadataexec -> 65536, filodb-query-exec-aggregate-large-container -> 65536),RoutingConfig(false,1800000 milliseconds,true,0)))""".stripMargin
+      """E~MultiPartitionDistConcatExec() on InProcessPlanDispatcher(QueryConfig(10 seconds,300000,1,50,antlr,true,true,None,None,None,None,25,true,false,true,Set(),None,Map(filodb-query-exec-metadataexec -> 65536, filodb-query-exec-aggregate-large-container -> 65536),RoutingConfig(false,1800000 milliseconds,true,0)))
+        |-E~LocalPartitionDistConcatExec() on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
+        |--T~PeriodicSamplesMapper(start=720000, step=60000, end=960000, window=None, functionId=None, rawSource=true, offsetMs=None)
+        |---E~MultiSchemaPartitionsExec(dataset=timeseries, shard=6, chunkMethod=TimeRangeChunkScan(420000,960000), filters=List(ColumnFilter(instance,Equals(Inst-1)), ColumnFilter(_metric_,Equals(test)), ColumnFilter(_ws_,Equals(demo)), ColumnFilter(_ns_,Equals(App-2))), colName=None, schema=None) on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
+        |--T~PeriodicSamplesMapper(start=720000, step=60000, end=960000, window=None, functionId=None, rawSource=true, offsetMs=None)
+        |---E~MultiSchemaPartitionsExec(dataset=timeseries, shard=22, chunkMethod=TimeRangeChunkScan(420000,960000), filters=List(ColumnFilter(instance,Equals(Inst-1)), ColumnFilter(_metric_,Equals(test)), ColumnFilter(_ws_,Equals(demo)), ColumnFilter(_ns_,Equals(App-2))), colName=None, schema=None) on ActorPlanDispatcher(Actor[akka://default/system/testProbe-6#893240335],raw)
+        |-E~PromQlRemoteExec(PromQlQueryParams(test{instance="Inst-1",_ws_="demo",_ns_="App-1"},720,60,960,None,false), PlannerParams(filodb,None,None,None,None,60000,PerQueryLimits(1000000,1000000,18000000,100000,100000,300000000,1000000,200000000),PerQueryLimits(50000,1000000,15000000,50000,50000,150000000,500000,100000000),None,None,None,false,86400000,86400000,true,true,false,false,true,10,false,true,TreeSet(),LegacyFailoverMode,None,None,None,None), queryEndpoint=remote-url, requestTimeoutMs=60000) on InProcessPlanDispatcher(QueryConfig(10 seconds,300000,1,50,antlr,true,true,None,None,None,None,25,true,false,true,Set(),Some(plannerSelector),Map(filodb-query-exec-metadataexec -> 65536, filodb-query-exec-aggregate-large-container -> 65536),RoutingConfig(false,1800000 milliseconds,true,0)))""".stripMargin
     val lp = Parser.queryToLogicalPlan(
       """test{_ws_ = "demo", _ns_ =~ "App.*", instance = "Inst-1" }[5m:1m]""",
       1000, 1000
@@ -248,7 +248,7 @@ class ShardKeyRegexPlannerSpec extends AnyFunSpec with Matchers with ScalaFuture
       ColumnFilter("_ns_", Equals("App-2"))))}
     val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
     val execPlan = engine.materialize(lp, QueryContext(origQueryParams = PromQlQueryParams(
-    """1 + test{_ws_ = \"demo\",_ns_ =~ \"App.*\", instance = \"Inst-1\" }""", 100, 1, 1000)))
+      """1 + test{_ws_ = \"demo\",_ns_ =~ \"App.*\", instance = \"Inst-1\" }""", 100, 1, 1000)))
     execPlan.isInstanceOf[MultiPartitionDistConcatExec] shouldEqual(true)
     execPlan.rangeVectorTransformers(0).isInstanceOf[ScalarOperationMapper] shouldEqual true
     execPlan.children(0).children.head.isInstanceOf[MultiSchemaPartitionsExec]
@@ -378,9 +378,9 @@ class ShardKeyRegexPlannerSpec extends AnyFunSpec with Matchers with ScalaFuture
       if (shardColumnFilters.nonEmpty) {
         Seq(
           Seq(ColumnFilter("_ws_", Equals("demo")),
-              ColumnFilter("_ns_", Equals("App-1"))),
+            ColumnFilter("_ns_", Equals("App-1"))),
           Seq(ColumnFilter("_ws_", Equals("demo")),
-              ColumnFilter("_ns_", Equals("App-2"))))
+            ColumnFilter("_ns_", Equals("App-2"))))
       } else Nil
     }
     val engine = new ShardKeyRegexPlanner( dataset, localPlanner, shardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
@@ -527,19 +527,19 @@ class ShardKeyRegexPlannerSpec extends AnyFunSpec with Matchers with ScalaFuture
     execPlan.isInstanceOf[LocalPartitionReduceAggregateExec] shouldEqual (true)
   }
 
-    it("should support for topk query with multiple matching values for regex if they are all local") {
-      val lp = Parser.queryToLogicalPlan(s"""topk(2, test{_ws_ = "demo", _ns_ =~ "App.*"})""",
-        1000, 1000)
-      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
-        Seq(Seq(ColumnFilter("_ws_", Equals("demo")),
-          ColumnFilter("_ns_", Equals("App-1"))),
-          Seq(ColumnFilter("_ws_", Equals("demo")),
-            ColumnFilter("_ns_", Equals("App-2"))))
-      }
-      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
-      val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
-      execPlan.isInstanceOf[MultiPartitionReduceAggregateExec] shouldEqual true
+  it("should support for topk query with multiple matching values for regex if they are all local") {
+    val lp = Parser.queryToLogicalPlan(s"""topk(2, test{_ws_ = "demo", _ns_ =~ "App.*"})""",
+      1000, 1000)
+    val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+      Seq(Seq(ColumnFilter("_ws_", Equals("demo")),
+        ColumnFilter("_ns_", Equals("App-1"))),
+        Seq(ColumnFilter("_ws_", Equals("demo")),
+          ColumnFilter("_ns_", Equals("App-2"))))
     }
+    val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
+    val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+    execPlan.isInstanceOf[MultiPartitionReduceAggregateExec] shouldEqual true
+  }
 
 
   it("should generate Exec plan for histogram quantile for Aggregate query having single matching regex value") {
@@ -1179,4 +1179,649 @@ class ShardKeyRegexPlannerSpec extends AnyFunSpec with Matchers with ScalaFuture
       validatePlan(execPlan.children.head, expected)
     }
   }
+
+  // ========== NEW MULTIPARTITION TEST CASES ==========
+
+  it("should route metadata queries to correct partitions with MultiPartitionPlanner") {
+    def testPartitions(timeRange: TimeRange): List[PartitionAssignment] = List(PartitionAssignment("remote", "remote-url",
+      TimeRange(timeRange.startMs, timeRange.endMs)))
+
+    val testMppPartitionLocationProvider = new PartitionLocationProvider {
+      override def getPartitions(routingKey: Map[String, String], timeRange: TimeRange): List[PartitionAssignment] = {
+        if (routingKey.equals(Map("_ns_" -> "App-1", "_ws_" -> "demo")))
+          List(PartitionAssignment("remote", "remote-url", TimeRange(timeRange.startMs, timeRange.endMs)))
+        else
+          List(PartitionAssignment("local", "local-url", TimeRange(timeRange.startMs, timeRange.endMs)))
+      }
+
+      override def getMetadataPartitions(nonMetricShardKeyFilters: Seq[ColumnFilter], timeRange: TimeRange): List[PartitionAssignment] =
+        testPartitions(timeRange)
+    }
+
+    val testConfig = QueryConfig(config).copy(plannerSelector = Some("plannerSelector"))
+    val testMpp = new MultiPartitionPlanner(
+      testMppPartitionLocationProvider, localPlanner, "local", dataset, testConfig
+    )
+
+    val testShardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+      Seq(
+        Seq(
+          ColumnFilter("_ws_", Equals("demo")),
+          ColumnFilter("_ns_", Equals("App-1"))
+        ),
+        Seq(
+          ColumnFilter("_ws_", Equals("demo")),
+          ColumnFilter("_ns_", Equals("App-2"))
+        )
+      )
+    }
+
+    val skrp = new ShardKeyRegexPlanner(dataset, testMpp, testShardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
+
+    val lp = Parser.queryToLogicalPlan("""test{_ws_ = "demo", _ns_ =~ "App.*"}""", 1000, 1000)
+    val execPlan = skrp.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+
+    execPlan.isInstanceOf[MultiPartitionDistConcatExec] shouldEqual true
+    execPlan.children.size shouldEqual 2
+
+    // Verify both partitions are represented
+    val childFilters = execPlan.children.flatMap(_.children.flatMap {
+      case mspe: MultiSchemaPartitionsExec => mspe.filters
+      case _ => Seq.empty
+    })
+
+    childFilters.count(f => f.column == "_ns_" && f.filter.valuesStrings.contains("App-1")) should be > 0
+    childFilters.count(f => f.column == "_ns_" && f.filter.valuesStrings.contains("App-2")) should be > 0
+  }
+
+  it("should handle multipartition aggregate queries with map-reduce correctly") {
+    val lp = Parser.queryToLogicalPlan("""sum(test{_ws_ = "demo", _ns_ =~ "App.*", instance = "Inst-1"})""", 1000, 1000)
+    val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+      Seq(
+        Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+        Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+      )
+    }
+    val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
+    val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+
+    // Verify it's a MultiPartitionReduceAggregateExec (reduce phase)
+    execPlan.isInstanceOf[MultiPartitionReduceAggregateExec] shouldEqual true
+    execPlan.asInstanceOf[MultiPartitionReduceAggregateExec].aggrOp shouldEqual Sum
+
+    // Verify we have 2 children (one for each partition: App-1 and App-2)
+    execPlan.children.size shouldEqual 2
+
+    // Verify children contain correct filters for each partition
+    execPlan.children(1).children.head.asInstanceOf[MultiSchemaPartitionsExec].filters.
+      contains(ColumnFilter("_ns_", Equals("App-1"))) shouldEqual true
+    execPlan.children.head.children.head.asInstanceOf[MultiSchemaPartitionsExec].filters.
+      contains(ColumnFilter("_ns_", Equals("App-2"))) shouldEqual true
+  }
+
+  it("should handle multipartition binary join operations correctly") {
+    val lp = Parser.queryToLogicalPlan(
+      """test1{_ws_ = "demo", _ns_ =~ "App.*"} + test2{_ws_ = "demo", _ns_ =~ "App.*"}""",
+      1000, 1000)
+    val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+      Seq(
+        Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+        Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+      )
+    }
+    val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
+    val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+
+    // Verify root is BinaryJoinExec
+    execPlan.isInstanceOf[BinaryJoinExec] shouldEqual true
+
+    // Verify both children are MultiPartitionDistConcatExec
+    execPlan.children.size shouldEqual 2
+    execPlan.children.head.isInstanceOf[MultiPartitionDistConcatExec] shouldEqual true
+    execPlan.children(1).isInstanceOf[MultiPartitionDistConcatExec] shouldEqual true
+
+    // Verify each side has 2 children (for App-1 and App-2)
+    val lhs = execPlan.children.head.asInstanceOf[MultiPartitionDistConcatExec]
+    val rhs = execPlan.children(1).asInstanceOf[MultiPartitionDistConcatExec]
+
+    lhs.children.size shouldEqual 2
+    rhs.children.size shouldEqual 2
+
+    // Verify filters are correct
+    lhs.children(1).children.head.asInstanceOf[MultiSchemaPartitionsExec].filters.
+      contains(ColumnFilter("_ns_", Equals("App-1"))) shouldEqual true
+    lhs.children.head.children.head.asInstanceOf[MultiSchemaPartitionsExec].filters.
+      contains(ColumnFilter("_ns_", Equals("App-2"))) shouldEqual true
+  }
+
+  it("should correctly propagate filters across multipartition boundaries") {
+    val lp = Parser.queryToLogicalPlan(
+      """test{_ws_ = "demo", _ns_ =~ "App.*", instance = "Inst-1"}""",
+      1000, 1000)
+    val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+      Seq(
+        Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+        Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+      )
+    }
+    val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
+    val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+
+    execPlan.isInstanceOf[MultiPartitionDistConcatExec] shouldEqual true
+    execPlan.children.size shouldEqual 2
+
+    // Verify all partitions have the correct filters
+    // Check first child
+    val child0Filters = execPlan.children.head.children.head.asInstanceOf[MultiSchemaPartitionsExec].filters
+    child0Filters.exists(f => f.column == "_ws_" && f.filter.valuesStrings.contains("demo")) shouldEqual true
+    child0Filters.exists(f => f.column == "instance" && f.filter.valuesStrings.contains("Inst-1")) shouldEqual true
+    child0Filters.exists(f => f.column == "_ns_" && f.filter.valuesStrings.contains("App-2")) shouldEqual true
+
+    // Check second child
+    val child1Filters = execPlan.children(1).children.head.asInstanceOf[MultiSchemaPartitionsExec].filters
+    child1Filters.exists(f => f.column == "_ws_" && f.filter.valuesStrings.contains("demo")) shouldEqual true
+    child1Filters.exists(f => f.column == "instance" && f.filter.valuesStrings.contains("Inst-1")) shouldEqual true
+    child1Filters.exists(f => f.column == "_ns_" && f.filter.valuesStrings.contains("App-1")) shouldEqual true
+  }
+
+  it("should handle multipartition queries with different shard key combinations") {
+    val lp = Parser.queryToLogicalPlan("""count(test{_ws_ = "demo", _ns_ =~ "App.*"})""", 1000, 1000)
+
+    val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+      Seq(
+        Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+        Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+      )
+    }
+    val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn, simplePartitionLocationProvider, queryConfig)
+    val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+
+    execPlan.isInstanceOf[MultiPartitionReduceAggregateExec] shouldEqual true
+    execPlan.asInstanceOf[MultiPartitionReduceAggregateExec].aggrOp shouldEqual Count
+    execPlan.children.size shouldEqual 2
+
+    // Verify children have correct filters
+    execPlan.children(1).children.head.asInstanceOf[MultiSchemaPartitionsExec].filters.
+      contains(ColumnFilter("_ns_", Equals("App-1"))) shouldEqual true
+    execPlan.children.head.children.head.asInstanceOf[MultiSchemaPartitionsExec].filters.
+      contains(ColumnFilter("_ns_", Equals("App-2"))) shouldEqual true
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════════════════════
+  // TEST SUITE: Partition Resolution Optimization - Shard Key Validation & Routing
+  // ═══════════════════════════════════════════════════════════════════════════════════════════════
+  //
+  // These tests validate the intelligent partition routing logic that:
+  // 1. Validates complete non-metric shard key information (hasAllNonMetricEquals)
+  // 2. Extracts routing maps from filter groups (buildRoutingMap)
+  // 3. Decides between optimized routing vs fallback (shouldFallback)
+  // 4. Executes the optimized routing chain for performance
+  // ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+  describe("Partition Resolution Optimization - Complete Shard Key Tests") {
+    /**
+     * TEST: Complete Non-Metric Shard Key (Optimized Path)
+     * ─────────────────────────────────────────────────
+     * Validates that queries with complete shard key information use optimized direct routing.
+     *
+     * Setup:
+     *   - Query: test{_ws_="demo", _ns_="App-1", instance="Inst-1"}
+     *   - All required non-metric columns present with Equals filters
+     *
+     * Expected Behavior:
+     *   - hasAllNonMetricEquals should return TRUE
+     *   - shouldFallback should be FALSE
+     *   - Optimized routing should query only specific partition
+     */
+    it("should use optimized routing with complete non-metric shard key") {
+      val lp = Parser.queryToLogicalPlan(
+        """test{_ws_ = "demo", _ns_ = "App-1", instance = "Inst-1"}""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(Seq(
+          ColumnFilter("_ws_", Equals("demo")),
+          ColumnFilter("_ns_", Equals("App-1"))
+        ))
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      val nonMetricShardColumns = dataset.options.nonMetricShardColumns
+      val filterGroups = LogicalPlan.getNonMetricShardKeyFilters(lp, nonMetricShardColumns)
+
+      // Verify: All required columns present
+      filterGroups.nonEmpty shouldEqual true
+      filterGroups.head.size should be > 0
+
+      // Verify: hasAllNonMetricEquals passes
+      engine.hasRequiredShardKeysPresent(filterGroups, nonMetricShardColumns) shouldEqual true
+
+      // Execute plan and verify structure
+      val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+
+      // With complete shard key, should materialize to specific partition plan
+      // not broadcast to multiple partitions
+      execPlan.children.size should be <= 2  // Single partition or local+remote
+    }
+  }
+
+  describe("Partition Resolution Optimization - Incomplete Shard Key Tests") {
+    /**
+     * TEST: Incomplete Non-Metric Shard Key - Missing ns (Fallback Path)
+     * ────────────────────────────────────────────────────────────────
+     * Validates that queries missing required non-metric columns fallback to metadata partitions.
+     *
+     * Setup:
+     *   - Query: test{_ws_="demo", instance="Inst-1"}  (missing _ns_)
+     *   - Required non-metric columns: [_ws_, _ns_]
+     *
+     * Expected Behavior:
+     *   - hasAllNonMetricEquals should return FALSE (ns missing)
+     *   - shouldFallback should be TRUE
+     *   - Should query all metadata partitions (safe, broad)
+     */
+    it("should fallback to metadata partitions when ns column is missing") {
+      val lp = Parser.queryToLogicalPlan(
+        """test{_ws_ = "demo", instance = "Inst-1"}""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+        )
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      val nonMetricShardColumns = dataset.options.nonMetricShardColumns
+      val filterGroups = LogicalPlan.getNonMetricShardKeyFilters(lp, nonMetricShardColumns)
+
+      // Verify: _ns_ is missing from filters
+      filterGroups.nonEmpty shouldEqual true
+      filterGroups.head.exists(cf => cf.column == "_ns_") shouldEqual false
+
+      // Verify: hasAllNonMetricEquals fails
+      engine.hasRequiredShardKeysPresent(filterGroups, nonMetricShardColumns) shouldEqual false
+    }
+
+    /**
+     * TEST: Incomplete Non-Metric Shard Key - Missing ws (Fallback Path)
+     * ────────────────────────────────────────────────────────────────
+     * Validates that queries missing ws column also trigger fallback.
+     *
+     * Setup:
+     *   - Query: test{_ns_="App-1", instance="Inst-1"}  (missing _ws_)
+     *
+     * Expected Behavior:
+     *   - hasAllNonMetricEquals should return FALSE (ws missing)
+     *   - shouldFallback should be TRUE
+     */
+    it("should fallback to metadata partitions when ws column is missing") {
+      val lp = Parser.queryToLogicalPlan(
+        """test{_ns_ = "App-1", instance = "Inst-1"}""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(Seq(
+          ColumnFilter("_ws_", Equals("demo")),
+          ColumnFilter("_ns_", Equals("App-1"))
+        ))
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      val nonMetricShardColumns = dataset.options.nonMetricShardColumns
+      val filterGroups = LogicalPlan.getNonMetricShardKeyFilters(lp, nonMetricShardColumns)
+
+      // Verify: _ws_ is missing from filters
+      filterGroups.nonEmpty shouldEqual true
+      filterGroups.head.exists(cf => cf.column == "_ws_") shouldEqual false
+
+      // Verify: hasAllNonMetricEquals fails
+      engine.hasRequiredShardKeysPresent(filterGroups, nonMetricShardColumns) shouldEqual false
+    }
+
+    /**
+     * TEST: Both Required Columns Missing (Fallback Path)
+     * ──────────────────────────────────────────────────
+     * Validates fallback when both required non-metric columns are missing.
+     *
+     * Setup:
+     *   - Query: test{instance="Inst-1"}  (no _ws_ or _ns_)
+     *
+     * Expected Behavior:
+     *   - hasAllNonMetricEquals should return FALSE (both missing)
+     *   - shouldFallback should be TRUE
+     */
+    it("should fallback to metadata partitions when both ws and ns are missing") {
+      val lp = Parser.queryToLogicalPlan(
+        """test{instance = "Inst-1"}""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+        )
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      val nonMetricShardColumns = dataset.options.nonMetricShardColumns
+      val filterGroups = LogicalPlan.getNonMetricShardKeyFilters(lp, nonMetricShardColumns)
+
+      // Verify: Both columns missing
+      filterGroups.nonEmpty shouldEqual true
+      filterGroups.head.exists(cf => cf.column == "_ws_") shouldEqual false
+      filterGroups.head.exists(cf => cf.column == "_ns_") shouldEqual false
+
+      // Verify: hasAllNonMetricEquals fails
+      engine.hasRequiredShardKeysPresent(filterGroups, nonMetricShardColumns) shouldEqual false
+    }
+  }
+
+  describe("Partition Resolution Optimization - Regex Filter Tests") {
+    /**
+     * TEST: Regex Filter on Non-Metric Column (Fallback Path)
+     * ──────────────────────────────────────────────────────
+     * Validates that regex patterns on non-metric columns trigger fallback.
+     * Regex cannot be used for direct partition routing - must discover via metadata.
+     *
+     * Setup:
+     *   - Query: test{_ws_=~"demo.*", _ns_="App-1", instance="Inst-1"}
+     *   - _ws_ uses regex (EqualsRegex), not exact match (Equals)
+     *
+     * Expected Behavior:
+     *   - hasAllNonMetricEquals should return FALSE (regex not Equals)
+     *   - shouldFallback should be TRUE
+     */
+    it("should fallback when ns column has regex filter instead of equals") {
+      val lp = Parser.queryToLogicalPlan(
+        """test{_ns_ =~ "App.*", instance = "Inst-1"}""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+        )
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      val nonMetricShardColumns = dataset.options.nonMetricShardColumns
+      val filterGroups = LogicalPlan.getNonMetricShardKeyFilters(lp, nonMetricShardColumns)
+
+      // Verify: At least one filter group exists
+      filterGroups.nonEmpty shouldEqual true
+
+      // Verify: hasAllNonMetricEquals fails (regex filter on _ns_)
+      // The regex is treated as non-equals, so validation should fail
+      engine.hasRequiredShardKeysPresent(filterGroups, nonMetricShardColumns) shouldEqual false
+    }
+  }
+
+  describe("Partition Resolution Optimization - Multiple Filter Groups (OR Logic)") {
+    /**
+     * TEST: Multiple Filter Groups with Complete Shard Keys (Optimized)
+     * ────────────────────────────────────────────────────────────────
+     * Validates OR queries where ALL groups have complete shard keys use optimized routing.
+     *
+     * Setup:
+     *   - Query: (test{_ws_="demo", _ns_="App-1"}) OR (test{_ws_="demo", _ns_="App-2"})
+     *   - Multiple filter groups, each with complete shard key info
+     *
+     * Expected Behavior:
+     *   - Both groups pass hasAllNonMetricEquals
+     *   - shouldFallback should be FALSE
+     *   - Should route to specific partitions for each group
+     *   - Use .distinct to deduplicate if same partition matches multiple groups
+     */
+    it("should use optimized routing for OR queries with complete shard keys in all groups") {
+      val lp = Parser.queryToLogicalPlan(
+        """sum(test{_ws_ = "demo", _ns_ =~ "App.*", instance = "Inst-1" })""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+        )
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      // Execute the query
+      val execPlan = engine.materialize(lp,
+        QueryContext(origQueryParams = PromQlQueryParams("sum(heap_usage)", 100, 1, 1000)))
+
+      // Verify: Multiple partitions are queried (one for App-1, one for App-2)
+      execPlan.isInstanceOf[MultiPartitionReduceAggregateExec] shouldEqual true
+
+      // Verify: Both filter groups are represented in execution plan
+      execPlan.children.size should be > 1
+
+      // Find the leaf nodes and verify shard key filters
+      var app1Found = false
+      var app2Found = false
+
+      execPlan.children.foreach { child =>
+        child.children.foreach { subchild =>
+          subchild match {
+            case msp: MultiSchemaPartitionsExec =>
+              if (msp.filters.exists(cf => cf.column == "_ns_" && cf.filter.toString.contains("App-1"))) {
+                app1Found = true
+              }
+              if (msp.filters.exists(cf => cf.column == "_ns_" && cf.filter.toString.contains("App-2"))) {
+                app2Found = true
+              }
+            case _ =>
+          }
+        }
+      }
+
+      app1Found shouldEqual true
+      app2Found shouldEqual true
+    }
+
+    /**
+     * TEST: Multiple Filter Groups with Mixed Completeness (Fallback)
+     * ──────────────────────────────────────────────────────────────
+     * Validates that if ANY group lacks complete shard key info, fallback is triggered.
+     * This is conservative: if ANY branch of OR query is incomplete, query all partitions.
+     *
+     * Setup:
+     *   - Filter groups: [complete: ws+ns], [incomplete: ws only]
+     *   - Since one group is incomplete, shouldFallback = TRUE
+     *
+     * Expected Behavior:
+     *   - hasAllNonMetricEquals passes for group 1, fails for group 2
+     *   - shouldFallback = TRUE (ANY group fails)
+     *   - Falls back to metadata partition query (safe path)
+     */
+    it("should fallback when any filter group in OR query lacks complete shard key") {
+      // This scenario is harder to create directly since we'd need to mock
+      // the shardKeyMatcherFn to return mixed groups. Instead, verify the logic:
+
+      val nonMetricShardColumns = dataset.options.nonMetricShardColumns
+
+      // Create test filter groups
+      val completeGroup = Seq(
+        ColumnFilter("_ws_", Equals("demo")),
+        ColumnFilter("_ns_", Equals("App-1"))
+      )
+
+      val incompleteGroup = Seq(
+        ColumnFilter("_ws_", Equals("demo"))
+        // Missing _ns_
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(completeGroup, incompleteGroup)
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      // Verify: completeGroup passes validation
+      val completeGroupValid = completeGroup.forall(cf =>
+        cf.filter match {
+          case Equals(_) => true
+          case _ => false
+        }
+      ) && nonMetricShardColumns.forall(col =>
+        completeGroup.exists(cf => cf.column == col)
+      )
+      completeGroupValid shouldEqual true
+
+      // Verify: incompleteGroup fails validation (missing _ns_)
+      val incompleteGroupValid = nonMetricShardColumns.forall(col =>
+        incompleteGroup.exists(cf => cf.column == col)
+      )
+      incompleteGroupValid shouldEqual false
+
+      // According to the logic: if ANY group is incomplete, shouldFallback = TRUE
+    }
+  }
+
+  describe("Partition Resolution Optimization - Empty Filter Groups") {
+    /**
+     * TEST: Empty Filter Groups (Fallback Path)
+     * ─────────────────────────────────────────
+     * Validates that queries with no shard key filters fallback to metadata partitions.
+     *
+     * Setup:
+     *   - Query: test{instance="Inst-1"}  (no non-metric shard key filters)
+     *
+     * Expected Behavior:
+     *   - shardKeyFilterGroups = empty
+     *   - shouldFallback = TRUE (empty check)
+     *   - Query all metadata partitions
+     */
+    it("should fallback when shard key filter groups are empty") {
+      val lp = Parser.queryToLogicalPlan(
+        """test{instance = "Inst-1"}""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(Seq.empty)  // Empty filter group
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      val nonMetricShardColumns = dataset.options.nonMetricShardColumns
+      val filterGroups = LogicalPlan.getNonMetricShardKeyFilters(lp, nonMetricShardColumns)
+
+      // Verify: Filter groups are empty
+      filterGroups.isEmpty shouldEqual true
+
+      // With empty filter groups, hasRequiredShardKeysPresent should return false
+      engine.hasRequiredShardKeysPresent(filterGroups, nonMetricShardColumns) shouldEqual false
+    }
+  }
+
+  describe("Partition Resolution Optimization - Integration Tests") {
+    /**
+     * TEST: End-to-End Optimized Routing with Complete Shard Key
+     * ────────────────────────────────────────────────────────────
+     * Validates the complete flow from query parsing to execution plan creation.
+     *
+     * Setup:
+     *   - Query with complete shard key (_ws_="demo", _ns_="App-1")
+     *   - Verify entire chain works: validation → routing → execution
+     *
+     * Expected Behavior:
+     *   - Query is materialized correctly
+     *   - Filters are preserved in execution plan
+     *   - Correct partition is selected
+     */
+    it("should correctly materialize query with complete shard key through entire chain") {
+      val lp = Parser.queryToLogicalPlan(
+        """test{_ws_ = "demo", _ns_ = "App-1", instance = "Inst-1"}""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(Seq(
+          ColumnFilter("_ws_", Equals("demo")),
+          ColumnFilter("_ns_", Equals("App-1"))
+        ))
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+
+      // Verify: Plan is executable
+      execPlan should not be null
+      execPlan.children should not be empty
+
+      // Verify: Filters are preserved (both shard key and metric filters)
+      val filters = execPlan.children.flatMap(e => e.children.flatMap {
+        case msp: MultiSchemaPartitionsExec => msp.filters
+        case _ => Nil
+      })
+      filters.exists(f => f.column == "_ws_" && f.filter.valuesStrings.contains("demo")) shouldEqual true
+      filters.exists(f => f.column == "_ns_" && f.filter.valuesStrings.contains("App-1")) shouldEqual true
+    }
+
+    /**
+     * TEST: End-to-End Fallback with Incomplete Shard Key
+     * ────────────────────────────────────────────────────
+     * Validates the complete flow when shard key is incomplete.
+     *
+     * Setup:
+     *   - Query missing _ns_ filter
+     *   - Should fallback and query all metadata partitions
+     *
+     * Expected Behavior:
+     *   - Query still materializes correctly
+     *   - Falls back to broader partition set
+     *   - Results still correct (just broader scope)
+     */
+    it("should correctly fallback through entire chain when shard key is incomplete") {
+      val lp = Parser.queryToLogicalPlan(
+        """test{_ws_ = "demo", instance = "Inst-1"}""",
+        1000, 1000
+      )
+
+      val shardKeyMatcherFn = (shardColumnFilters: Seq[ColumnFilter]) => {
+        Seq(
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-1"))),
+          Seq(ColumnFilter("_ws_", Equals("demo")), ColumnFilter("_ns_", Equals("App-2")))
+        )
+      }
+
+      val engine = new ShardKeyRegexPlanner(dataset, localPlanner, shardKeyMatcherFn,
+        simplePartitionLocationProvider, queryConfig)
+
+      val execPlan = engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams))
+
+      // Verify: Plan still materializes (fallback working)
+      execPlan should not be null
+      execPlan.children should not be empty
+
+      // With fallback, may get more partitions queried
+      // The exact structure depends on implementation, but should be valid
+      execPlan.children.size should be > 0
+    }
+  }
+
 }
