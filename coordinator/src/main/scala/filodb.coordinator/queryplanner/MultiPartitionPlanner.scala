@@ -7,10 +7,10 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters._
 
+import akka.util.Helpers.Requiring
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.ManagedChannel
 
-import filodb.coordinator.flight.PromQLFlightRemoteExec
 import filodb.coordinator.queryplanner.LogicalPlanUtils._
 import filodb.coordinator.queryplanner.PlannerUtil.rewritePlanWithRemoteRawExport
 import filodb.core.{StaticTargetSchemaProvider, TargetSchemaProvider}
@@ -91,7 +91,6 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
                             localPartitionName: String,
                             val dataset: Dataset,
                             val queryConfig: QueryConfig,
-                            val flightEnabled: Boolean,
                             remoteExecHttpClient: RemoteExecHttpClient = RemoteHttpClient.defaultClient,
                             channels: ConcurrentMap[String, ManagedChannel] =
                             new ConcurrentHashMap[String, ManagedChannel]().asScala,
@@ -147,7 +146,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
     }
   }
 
-  // scalastyle:off method.length cyclomatic.complexity
+  // scalastyle:off method.length
   override def walkLogicalPlanTree(logicalPlan: LogicalPlan,
                                    qContext: QueryContext,
                                    forceInProcess: Boolean = false): PlanResult = {
@@ -190,7 +189,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
               val newPromQlParams = params.copy(promQl = LogicalPlanParser.convertToQuery(lp))
                 StitchRvsExec(qContext.copy(origQueryParams = newPromQlParams)
                   , inProcessPlanDispatcher, None,
-                  PlannerUtil.localPlansFirst(execPlans),
+                  execPlans.sortWith((x, _) => !x.isInstanceOf[PromQlRemoteExec]),
                   enableApproximatelyEqualCheck = queryConfig.routingConfig.enableApproximatelyEqualCheckInStitch)
             }
             )
@@ -232,12 +231,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
               generateRemoteExecParams(qContext, startMs, endMs, logicalPlan)
           }
           // Single partition but remote, send the entire plan remotely
-          if (grpcEndpoint.isDefined && !(queryConfig.flightPartitionsDenyList.contains("*") ||
-            queryConfig.flightPartitionsDenyList.contains(partitionName.toLowerCase))) {
-            val endpoint = grpcEndpoint.get
-            PromQLFlightRemoteExec(remoteContext, inProcessPlanDispatcher, endpoint, remoteHttpTimeoutMs,
-              dataset.ref, plannerSelector, s"${partitionName}-$workUnit")
-          } else if (grpcEndpoint.isDefined && !(queryConfig.grpcPartitionsDenyList.contains("*") ||
+          if (grpcEndpoint.isDefined && !(queryConfig.grpcPartitionsDenyList.contains("*") ||
             queryConfig.grpcPartitionsDenyList.contains(partitionName.toLowerCase))) {
             val endpoint = grpcEndpoint.get
             val channel = channels.getOrElseUpdate(endpoint, GrpcCommonUtils.buildChannelFromEndpoint(endpoint))
@@ -434,7 +428,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
       else {
         // TODO: Do we pass in QueryContext in LogicalPlan's helper rvRangeForPlan?
         StitchRvsExec(qContext, inProcessPlanDispatcher, rvRangeFromPlan(logicalPlan),
-          PlannerUtil.localPlansFirst(execPlans),
+          execPlans.sortWith((x, _) => !x.isInstanceOf[PromQlRemoteExec]),
           enableApproximatelyEqualCheck = queryConfig.routingConfig.enableApproximatelyEqualCheckInStitch)
       }
       // ^^ Stitch RemoteExec plan results with local using InProcessPlanDispatcher
@@ -459,7 +453,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
       queryParams.copy(promQl = LogicalPlanParser.convertToQuery(binaryJoin.rhs)))
     val rhsPlan = materializeForAssignment(binaryJoin.rhs, assignment, rightContext, timeRangeOverride)
 
-    val dispatcher = PlannerUtil.pickDispatcher(Seq(lhsPlan, rhsPlan), flightEnabled)
+    val dispatcher = PlannerUtil.pickDispatcher(Seq(lhsPlan, rhsPlan))
     if (binaryJoin.operator.isInstanceOf[SetOperator])
       exec.SetOperatorExec(queryContext, dispatcher, Seq(lhsPlan), Seq(rhsPlan), binaryJoin.operator,
         binaryJoin.on.map(LogicalPlanUtils.renameLabels(_, dsOptions.metricColumn)),
@@ -500,9 +494,9 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
         plans.filter(_.isInstanceOf[PromQlRemoteExec]).foreach(
           _.addRangeVectorTransformer(AggregateMapReduce(aggregate.operator, aggregate.params, aggregate.clauseOpt))
         )
-        val dispatcher = PlannerUtil.pickDispatcher(plans, flightEnabled)
+        val dispatcher = PlannerUtil.pickDispatcher(plans)
         val reducer = MultiPartitionReduceAggregateExec(queryContext, dispatcher,
-          PlannerUtil.localPlansFirst(plans), aggregate.operator, aggregate.params)
+          plans.sortWith((x, _) => !x.isInstanceOf[PromQlRemoteExec]), aggregate.operator, aggregate.params)
         if (!queryContext.plannerParams.skipAggregatePresent) {
           val promQlQueryParams = queryContext.origQueryParams.asInstanceOf[PromQlQueryParams]
           reducer.addRangeVectorTransformer(AggregatePresenter(aggregate.operator, aggregate.params,
@@ -804,7 +798,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
         partitionDetails.grpcEndPoint, partitionDetails.httpEndPoint, queryContext, timeRangeOverride,
         partitionDetails.workUnit)
     }).toSeq
-    val dispatcher = PlannerUtil.pickDispatcher(plans, flightEnabled)
+    val dispatcher = PlannerUtil.pickDispatcher(plans)
     MultiPartitionDistConcatExec(queryContext, dispatcher, plans)
   }
 
@@ -836,12 +830,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
       localPartitionPlanner.materialize(lpWithUpdatedTime, qContextWithOverride)
     } else {
       val ctx = generateRemoteExecParams(qContextWithOverride, timeRange.startMs, timeRange.endMs, logicalPlan)
-      if (grpcEndpoint.isDefined && !(queryConfig.flightPartitionsDenyList.contains("*") ||
-        queryConfig.flightPartitionsDenyList.contains(partitionName.toLowerCase))) {
-        val endpoint = grpcEndpoint.get
-        PromQLFlightRemoteExec(ctx, inProcessPlanDispatcher, endpoint, remoteHttpTimeoutMs,
-          dataset.ref, plannerSelector, s"$partitionName-${partition.workUnit}")
-      } else if (grpcEndpoint.isDefined &&
+      if (grpcEndpoint.isDefined &&
         !(queryConfig.grpcPartitionsDenyList.contains("*") ||
           queryConfig.grpcPartitionsDenyList.contains(partitionName.toLowerCase))) {
         val channel = channels.getOrElseUpdate(grpcEndpoint.get,
@@ -884,12 +873,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
       localPartitionPlanner.materialize(lpWithUpdatedTime, qContextWithOverride)
     } else {
       val ctx = generateRemoteExecParams(qContextWithOverride, timeRange.startMs, timeRange.endMs, logicalPlan)
-      if (grpcEndpoint.isDefined && !(queryConfig.flightPartitionsDenyList.contains("*") ||
-        queryConfig.flightPartitionsDenyList.contains(partitionName.toLowerCase))) {
-        val endpoint = grpcEndpoint.get
-        PromQLFlightRemoteExec(ctx, inProcessPlanDispatcher, endpoint, remoteHttpTimeoutMs,
-          dataset.ref, plannerSelector, s"$partitionName-$workUnit")
-      } else if (grpcEndpoint.isDefined &&
+      if (grpcEndpoint.isDefined &&
         !(queryConfig.grpcPartitionsDenyList.contains("*") ||
           queryConfig.grpcPartitionsDenyList.contains(partitionName.toLowerCase))) {
         val channel = channels.getOrElseUpdate(grpcEndpoint.get,
@@ -1028,7 +1012,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
           throw new UnsupportedOperationException(s"Shard Key regex not supported for ${aggregate.operator}")
         else {
           val reducer = MultiPartitionReduceAggregateExec(queryContext, inProcessPlanDispatcher,
-            PlannerUtil.localPlansFirst(execPlans).toSeq, aggregate.operator, aggregate.params)
+            execPlans.sortWith((x, _) => !x.isInstanceOf[PromQlRemoteExec]).toSeq, aggregate.operator, aggregate.params)
           if (!queryContext.plannerParams.skipAggregatePresent) {
             reducer.addRangeVectorTransformer(AggregatePresenter(aggregate.operator, aggregate.params,
               RangeParams(queryParams.startSecs, queryParams.stepSecs, queryParams.endSecs)))
@@ -1263,7 +1247,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
       val rvRange = RvRange(1000 * qParams.startSecs,
                             1000 * qParams.stepSecs,
                             1000 * qParams.endSecs)
-      StitchRvsExec(qContext, inProcessPlanDispatcher, Some(rvRange), execPlans.toSeq,
+      StitchRvsExec(qContext, inProcessPlanDispatcher, Some(rvRange), execPlans,
         enableApproximatelyEqualCheck = queryConfig.routingConfig.enableApproximatelyEqualCheckInStitch)
     }
     PlanResult(Seq(resPlan))
@@ -1364,12 +1348,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
     // LabelCardinality is a special case, here the partitions to send this query to is not  the authorized partition
     // but the actual one where data resides, similar to how non metadata plans work, however, getting label cardinality
     // is a metadata operation and shares common components with other metadata endpoints.
-    val partitions = lp match {
-      case lc: LabelCardinality       => getPartitions(lc, qContext.origQueryParams.asInstanceOf[PromQlQueryParams])
-      case _                          => getMetadataPartitions(lp.filters,
-        TimeRange(queryParams.startSecs * 1000, queryParams.endSecs * 1000))
-    }
-
+    val partitions = resolveMetadataPartitions(lp, queryParams)
     val execPlan = if (partitions.isEmpty) {
       logger.warn(s"No partitions found for ${queryParams.startSecs}, ${queryParams.endSecs}")
       localPartitionPlanner.materialize(lp, qContext)
@@ -1406,6 +1385,57 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
     PlanResult(execPlan::Nil)
   }
 
+  private def resolveMetadataPartitions(lp: MetadataQueryPlan, queryParams: PromQlQueryParams) = {
+    val timeRange = TimeRange(queryParams.startSecs * 1000L, queryParams.endSecs * 1000L)
+    // SeriesKeysByFilters stores its filters directly; getNonMetricShardKeyFilters doesn't extract them
+    // via getRawSeriesFilters (which only handles RawSeries/LabelValues/LabelNames leaves).
+    val shardKeyFilterGroups = lp match {
+      case skbf: SeriesKeysByFilters =>
+        Seq(skbf.filters.filter(f => dataset.options.shardKeyColumns.contains(f.column)))
+      case _ =>
+        LogicalPlan.getNonMetricShardKeyFilters(lp, dataset.options.shardKeyColumns)
+    }
+    val nonMetricCols = dataset.options.nonMetricShardColumns
+
+    val areEqualFilters = shardKeyFilterGroups.forall(columnFilters =>
+      columnFilters.
+        forall(
+          colFilter =>
+            colFilter.filter match {
+              case _: Equals => true
+              case _ => false
+            }
+        ))
+
+    def buildRoutingMap(group: Seq[ColumnFilter]): Map[String, String] =
+      nonMetricCols.flatMap(shardKeyCol =>
+        group.collectFirst {
+          case ColumnFilter(c, filter) if c == shardKeyCol => c -> filter.value.toString
+        }
+      ).toMap
+
+    val shouldFallback = queryConfig.routingConfig.useLegacyMetadataRouting || !areEqualFilters ||
+      shardKeyFilterGroups.isEmpty ||
+      !shardKeyFilterGroups.forall(group => nonMetricCols.forall(col => group.exists(_.column == col)))
+
+    // this will preserve the legacy routing logic.
+
+    lp match {
+      case lc: LabelCardinality =>
+        getPartitions(lc, queryParams)
+
+      case _ =>
+        if (shouldFallback) {
+          getMetadataPartitions(lp.filters, timeRange)
+        } else {
+          shardKeyFilterGroups
+            .map(buildRoutingMap)
+            .flatMap(routingMap => partitionLocationProvider.getPartitions(routingMap, timeRange))
+            .distinct
+        }
+    }
+  }
+
   def materializeTsCardinalities(lp: TsCardinalities, qContext: QueryContext): PlanResult = {
 
     val queryParams = qContext.origQueryParams.asInstanceOf[PromQlQueryParams]
@@ -1414,7 +1444,7 @@ class MultiPartitionPlanner(val partitionLocationProvider: PartitionLocationProv
       getPartitions(lp, queryParams, infiniteTimeRange = true)
     } else {
       logger.info(s"(ws, ns) pair not provided in prefix=${lp.shardKeyPrefix};" +
-                  s"dispatching to all authorized partitions")
+        s"dispatching to all authorized partitions")
       getMetadataPartitions(lp.filters(), TimeRange(0, Long.MaxValue))
     }
     val execPlan = if (partitions.isEmpty) {
