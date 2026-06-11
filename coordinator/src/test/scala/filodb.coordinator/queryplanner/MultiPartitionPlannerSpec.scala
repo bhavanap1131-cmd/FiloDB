@@ -2828,7 +2828,7 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
     it("should fall back to getMetadataPartitions when a shard-key filter is missing (SeriesKeysByFilters)") {
       val provider = makeFallbackProvider("legacy-remote-url", "direct-remote-url")
       val engine = makeMultiShardPlanner(provider)
-      // Only _ws_ filter present, _ns_ is missing — not all shard-key columns are present
+      // Only _ws_ filter present, _ns_ is missing — not all shard-key columns are  present
       // so should fall back to getMetadataPartitions, not getPartitions
       val lp = Parser.metadataQueryToLogicalPlan(
         """foo{_ws_="demo"}""",
