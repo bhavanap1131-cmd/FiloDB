@@ -18,7 +18,7 @@ class SinglePartitionPlanner(planners: Map[String, QueryPlanner],
                              plannerSelector: String => String,
                              val dataset: Dataset,
                              val queryConfig: QueryConfig,
-                             val flightEnabled: Boolean)
+                             val flightEnabled: Boolean = false)
   extends QueryPlanner with DefaultPlanner {
 
   override val schemas: Schemas = Schemas(dataset.schema)

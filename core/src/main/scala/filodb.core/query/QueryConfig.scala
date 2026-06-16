@@ -24,6 +24,7 @@ object QueryConfig {
     val allowPartialResultsMetadataQuery = queryConfig.getBoolean("allow-partial-results-metadataquery")
     val allowPartialResultsRangeQuery = queryConfig.getBoolean("allow-partial-results-rangequery")
     val grpcDenyList = queryConfig.getString("grpc.partitions-deny-list")
+    val flightDenyList = queryConfig.getString("grpc.flight.partitions-deny-list")
     val containerOverrides = queryConfig.as[Map[String, Int]]("container-size-overrides")
     val numRvsPerResultMessage = queryConfig.getInt("num-rvs-per-result-message")
 
@@ -37,17 +38,14 @@ object QueryConfig {
     val tenantsWithDisabledRemoteStitch : Set[String] =
       queryConfig.getStringList("routing.disabled-remote-stitch-tenants").asScala.toSet
     val stitchDisabledTenantColumn = queryConfig.getString("routing.disabled-remote-stitch-tenant-column-name")
-    val useLegacyMetadataRouting = queryConfig.as[Option[Boolean]](
-      "routing.use-legacy-metadata-routing").getOrElse(false)
 
     val rc = RoutingConfig(
-      supportRemoteRawExport,
-      maxRemoteRawExportTimeRange,
-      enableApproximatelyEqualCheckInStitch,
-      periodOfUncertaintyMs,
-      tenantsWithDisabledRemoteStitch,
-      stitchDisabledTenantColumn,
-      useLegacyMetadataRouting
+        supportRemoteRawExport,
+        maxRemoteRawExportTimeRange,
+        enableApproximatelyEqualCheckInStitch,
+        periodOfUncertaintyMs,
+        tenantsWithDisabledRemoteStitch,
+        stitchDisabledTenantColumn
     )
 
     val scCachingEnabled = queryConfig.as[Boolean]("single.cluster.cache.enabled")
@@ -63,6 +61,7 @@ object QueryConfig {
       numRvsPerResultMessage, enforceResultByteLimit,
       allowPartialResultsRangeQuery, allowPartialResultsMetadataQuery,
       grpcDenyList.split(",").map(_.trim.toLowerCase).toSet,
+      flightDenyList.split(",").map(_.trim.toLowerCase).toSet,
       None,
       containerOverrides, rc, cachingConfig, enableLocalDispatch)
   }
@@ -95,8 +94,7 @@ case class RoutingConfig(
                           enableApproximatelyEqualCheckInStitch: Boolean = true,
                           periodOfUncertaintyMs: Long                    = (5 minutes).toMillis,
                           tenantsWithDisabledRemoteStitch: Set[String]   = Set.empty,
-                          stitchDisabledTenantColumn: String             = "",
-                          useLegacyMetadataRouting: Boolean              = false
+                          stitchDisabledTenantColumn: String             = ""
                         )
 
 case class CachingConfig(
@@ -120,6 +118,7 @@ case class QueryConfig(askTimeout: FiniteDuration,
                        allowPartialResultsRangeQuery: Boolean = false,
                        allowPartialResultsMetadataQuery: Boolean = true,
                        grpcPartitionsDenyList: Set[String] = Set.empty,
+                       flightPartitionsDenyList: Set[String] = Set.empty,
                        plannerSelector: Option[String] = None,
                        recordContainerOverrides: Map[String, Int] = Map.empty,
                        routingConfig: RoutingConfig               = RoutingConfig(),
