@@ -2756,11 +2756,12 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
     )
 
     val partitionLocationProvider = new PartitionLocationProvider {
-      override def getPartitions(routingKey: Map[String, String], timeRange: TimeRange): List[PartitionAssignment] = Nil
-      override def getPartitionsTrait(routingKey: Map[String, String], timeRange: TimeRange): List[PartitionAssignmentTrait] = Nil
-      override def getMetadataPartitions(nonMetricShardKeyFilters: scala.Seq[ColumnFilter], timeRange: TimeRange): List[PartitionAssignment] = {
+      override def getPartitions(routingKey: Map[String, String], timeRange: TimeRange): List[PartitionAssignment] =
         List(PartitionAssignment("remote", "remote-url", TimeRange(1000 * 1000, 10000 * 1000), None, "testWorkUnit"))
-      }
+      override def getPartitionsTrait(routingKey: Map[String, String], timeRange: TimeRange): List[PartitionAssignmentTrait] =
+        List(PartitionAssignment("remote", "remote-url", TimeRange(1000 * 1000, 10000 * 1000), None, "testWorkUnit"))
+      override def getMetadataPartitions(nonMetricShardKeyFilters: scala.Seq[ColumnFilter], timeRange: TimeRange): List[PartitionAssignment] =
+        List(PartitionAssignment("remote", "remote-url", TimeRange(1000 * 1000, 10000 * 1000), None, "testWorkUnit"))
     }
     val engine = new MultiPartitionPlanner(partitionLocationProvider, localPlanner, "local", dataset, queryConfig, false)
 
@@ -2771,6 +2772,38 @@ class MultiPartitionPlannerSpec extends AnyFunSpec with Matchers with PlanValida
         plannerParams = PlannerParams(processMultiPartition = true)))
       val remoteExecQuery = execPlan.asInstanceOf[MetadataRemoteExec].promQlQueryParams.promQl
       remoteExecQuery shouldEqual query
+    }
+  }
+
+  describe("Metadata Query Routing - MultiPartitionPlanner") {
+    it("should fallback to getMetadataPartitions when one shard-key filter is regex") {
+      // When _ns_ uses a regex filter, resolveMetadataPartitions should fall back to
+      // getMetadataPartitions (routes to all authorized partitions) rather than getPartitions.
+      val regexQuery = """series_with_labels{_ws_="demo",_ns_=~".*"}"""
+      val lp = Parser.metadataQueryToLogicalPlan(regexQuery, TimeStepParams(1000, 100, 10000))
+      val promQlQueryParams = PromQlQueryParams(regexQuery, 1000, 100, 10000)
+
+      var getPartitionsCalled = false
+      var getMetadataPartitionsCalled = false
+
+      val partitionLocationProvider = new PartitionLocationProvider {
+        override def getPartitions(routingKey: Map[String, String], timeRange: TimeRange): List[PartitionAssignment] = {
+          getPartitionsCalled = true
+          List(PartitionAssignment("remote", "remote-url", timeRange, None, "testWorkUnit"))
+        }
+        override def getMetadataPartitions(nonMetricShardKeyFilters: Seq[ColumnFilter],
+                                           timeRange: TimeRange): List[PartitionAssignment] = {
+          getMetadataPartitionsCalled = true
+          List(PartitionAssignment("remote", "remote-url", timeRange, None, "testWorkUnit"))
+        }
+      }
+
+      val engine = new MultiPartitionPlanner(partitionLocationProvider, localPlanner, "local", dataset, queryConfig, false)
+      engine.materialize(lp, QueryContext(origQueryParams = promQlQueryParams,
+        plannerParams = PlannerParams(processMultiPartition = true)))
+
+      getMetadataPartitionsCalled shouldEqual true
+      getPartitionsCalled shouldEqual false
     }
   }
 }
